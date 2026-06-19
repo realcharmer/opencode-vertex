@@ -12,17 +12,27 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
+detect_runtime() {
+  if command -v podman &>/dev/null && podman info &>/dev/null 2>&1; then
+    echo "podman"
+  elif command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
+    echo "docker"
+  else
+    echo ""
+  fi
+}
+
 echo "==> Checking prerequisites..."
 
-if ! command -v docker &>/dev/null; then
-  echo -e "${RED}Error: docker is not installed or not in PATH.${NC}"
+RUNTIME=$(detect_runtime)
+
+if [[ -z "${RUNTIME}" ]]; then
+  echo -e "${RED}Error: neither Docker (with a running daemon) nor Podman was found.${NC}"
+  echo "Install Docker (https://docs.docker.com/get-docker/) or Podman (https://podman.io/getting-started/installation)."
   exit 1
 fi
 
-if ! docker info &>/dev/null; then
-  echo -e "${RED}Error: Docker daemon is not running.${NC}"
-  exit 1
-fi
+echo "  Using runtime: ${RUNTIME}"
 
 # Create ~/.opencode-vertex.env if it doesn't exist
 if [[ ! -f "${ENV_FILE}" ]]; then
@@ -39,16 +49,16 @@ if grep -q "your-project-id" "${ENV_FILE}"; then
   echo -e "Edit ${ENV_FILE} and set your real project ID before using opencode."
 fi
 
-echo "==> Building Docker image: ${IMAGE}..."
-docker build -t "${IMAGE}" "$(dirname "$0")"
+echo "==> Building image: ${IMAGE}..."
+"${RUNTIME}" build -t "${IMAGE}" "$(dirname "$0")"
 
-echo "==> Creating Docker volumes (if not already present)..."
-docker volume create "${GCLOUD_VOLUME}" &>/dev/null && echo "  Volume ${GCLOUD_VOLUME} ready."
-docker volume create "${SESSIONS_VOLUME}" &>/dev/null && echo "  Volume ${SESSIONS_VOLUME} ready."
+echo "==> Creating volumes (if not already present)..."
+"${RUNTIME}" volume create "${GCLOUD_VOLUME}" &>/dev/null && echo "  Volume ${GCLOUD_VOLUME} ready."
+"${RUNTIME}" volume create "${SESSIONS_VOLUME}" &>/dev/null && echo "  Volume ${SESSIONS_VOLUME} ready."
 
 # Check whether application default credentials already exist in the volume
 CREDS_PATH="/root/.config/gcloud/application_default_credentials.json"
-CREDS_EXIST=$(docker run --rm \
+CREDS_EXIST=$("${RUNTIME}" run --rm \
   -v "${GCLOUD_VOLUME}:/root/.config/gcloud" \
   alpine \
   sh -c "[ -f '${CREDS_PATH}' ] && echo yes || echo no" 2>/dev/null)
@@ -58,11 +68,11 @@ if [[ "${CREDS_EXIST}" != "yes" ]]; then
   echo "==> No Google Cloud credentials found. Running one-time login..."
   LOGIN_CONTAINER="opencode-gcloud-login-$$"
   cleanup_login_container() {
-    docker rm -f "${LOGIN_CONTAINER}" &>/dev/null || true
+    "${RUNTIME}" rm -f "${LOGIN_CONTAINER}" &>/dev/null || true
   }
   trap cleanup_login_container EXIT
 
-  docker run -it \
+  "${RUNTIME}" run -it \
     --name "${LOGIN_CONTAINER}" \
     -v "${GCLOUD_VOLUME}:/root/.config/gcloud" \
     google/cloud-sdk:alpine \
@@ -95,7 +105,7 @@ echo "-----------------------------------------------------------------------"
 echo " Add the following alias to ${SHELL_CONFIG}:"
 echo "-----------------------------------------------------------------------"
 echo ""
-echo "alias opencode='docker run -it --rm \\"
+echo "alias opencode='${RUNTIME} run -it --rm \\"
 echo "  -v \"\$(pwd)\":/workspace \\"
 echo "  -v ${GCLOUD_VOLUME}:/root/.config/gcloud \\"
 echo "  -v ${SESSIONS_VOLUME}:/root/.local/share/opencode \\"
