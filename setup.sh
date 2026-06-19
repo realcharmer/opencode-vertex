@@ -5,6 +5,7 @@ IMAGE="opencode-vertex"
 ENV_FILE="${HOME}/.opencode-vertex.env"
 GCLOUD_VOLUME="opencode-gcloud"
 SESSIONS_VOLUME="opencode-sessions"
+SESSIONS_MOUNT="/sessions"
 
 # Colors
 RED='\033[0;31m'
@@ -56,10 +57,14 @@ echo "==> Creating volumes (if not already present)..."
 "${RUNTIME}" volume create "${GCLOUD_VOLUME}" &>/dev/null && echo "  Volume ${GCLOUD_VOLUME} ready."
 "${RUNTIME}" volume create "${SESSIONS_VOLUME}" &>/dev/null && echo "  Volume ${SESSIONS_VOLUME} ready."
 
-# Check whether application default credentials already exist in the volume
-CREDS_PATH="/root/.config/gcloud/application_default_credentials.json"
+# Check whether application default credentials already exist in the volume.
+# The volume is mounted at /gcloud for opencode containers, but the login
+# container (google/cloud-sdk) writes to its default path /root/.config/gcloud.
+# Both point to the same volume root, so the file lands at the volume root
+# as application_default_credentials.json either way.
+CREDS_PATH="/gcloud/application_default_credentials.json"
 CREDS_EXIST=$("${RUNTIME}" run --rm \
-  -v "${GCLOUD_VOLUME}:/root/.config/gcloud" \
+  -v "${GCLOUD_VOLUME}:/gcloud" \
   alpine \
   sh -c "[ -f '${CREDS_PATH}' ] && echo yes || echo no" 2>/dev/null)
 
@@ -72,6 +77,8 @@ if [[ "${CREDS_EXIST}" != "yes" ]]; then
   }
   trap cleanup_login_container EXIT
 
+  # Mount at /root/.config/gcloud so gcloud writes to its default config dir;
+  # the credential file ends up at the volume root regardless of mount point.
   "${RUNTIME}" run -it \
     --name "${LOGIN_CONTAINER}" \
     -v "${GCLOUD_VOLUME}:/root/.config/gcloud" \
@@ -82,8 +89,15 @@ if [[ "${CREDS_EXIST}" != "yes" ]]; then
   trap - EXIT
   echo -e "${GREEN}Login successful.${NC}"
 else
-  echo "  Existing Google Cloud credentials detected — skipping login."
+  echo "  Existing Google Cloud credentials detected. Skipping login."
 fi
+
+"${RUNTIME}" run --rm \
+  -v "${GCLOUD_VOLUME}:/gcloud" \
+  -v "${SESSIONS_VOLUME}:${SESSIONS_MOUNT}" \
+  alpine \
+  sh -c "chmod -R a+rX /gcloud && chmod a+rwx ${SESSIONS_MOUNT}" \
+  && echo "  Volume permissions set."
 
 # Detect current shell config file
 detect_shell_config() {
@@ -105,13 +119,34 @@ echo "-----------------------------------------------------------------------"
 echo " Add the following alias to ${SHELL_CONFIG}:"
 echo "-----------------------------------------------------------------------"
 echo ""
-echo "alias opencode='${RUNTIME} run -it --rm \\"
-echo "  -v \"\$(pwd)\":/workspace \\"
-echo "  -v ${GCLOUD_VOLUME}:/root/.config/gcloud \\"
-echo "  -v ${SESSIONS_VOLUME}:/root/.local/share/opencode \\"
-echo "  --env-file \"${ENV_FILE}\" \\"
-echo "  -e GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json \\"
-echo "  ${IMAGE}'"
+if [[ "${RUNTIME}" == "podman" ]]; then
+  echo "alias opencode='podman run -it --rm \\"
+  echo "  --userns=keep-id \\"
+  echo "  --user \"\$(id -u):\$(id -g)\" \\"
+  echo "  -v \"\$(pwd)\":/workspace \\"
+  echo "  -v ${GCLOUD_VOLUME}:/gcloud \\"
+  echo "  -v ${SESSIONS_VOLUME}:${SESSIONS_MOUNT} \\"
+  echo "  --env-file \"${ENV_FILE}\" \\"
+  echo "  -e GOOGLE_APPLICATION_CREDENTIALS=/gcloud/application_default_credentials.json \\"
+  echo "  -e HOME=${SESSIONS_MOUNT} \\"
+  echo "  -e XDG_DATA_HOME=${SESSIONS_MOUNT} \\"
+  echo "  -e XDG_CACHE_HOME=${SESSIONS_MOUNT}/.cache \\"
+  echo "  -e OPENCODE_CONFIG=/etc/opencode/config.json \\"
+  echo "  ${IMAGE}'"
+else
+  echo "alias opencode='docker run -it --rm \\"
+  echo "  --user \"\$(id -u):\$(id -g)\" \\"
+  echo "  -v \"\$(pwd)\":/workspace \\"
+  echo "  -v ${GCLOUD_VOLUME}:/gcloud \\"
+  echo "  -v ${SESSIONS_VOLUME}:${SESSIONS_MOUNT} \\"
+  echo "  --env-file \"${ENV_FILE}\" \\"
+  echo "  -e GOOGLE_APPLICATION_CREDENTIALS=/gcloud/application_default_credentials.json \\"
+  echo "  -e HOME=${SESSIONS_MOUNT} \\"
+  echo "  -e XDG_DATA_HOME=${SESSIONS_MOUNT} \\"
+  echo "  -e XDG_CACHE_HOME=${SESSIONS_MOUNT}/.cache \\"
+  echo "  -e OPENCODE_CONFIG=/etc/opencode/config.json \\"
+  echo "  ${IMAGE}'"
+fi
 echo ""
 echo "Then run: source ${SHELL_CONFIG}"
 echo "-----------------------------------------------------------------------"

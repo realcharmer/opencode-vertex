@@ -29,22 +29,33 @@ VERTEX_LOCATION=global
 Podman:
 ```sh
 alias opencode='podman run -it --rm \
+  --userns=keep-id \
+  --user "$(id -u):$(id -g)" \
   -v "$(pwd)":/workspace \
-  -v opencode-gcloud:/root/.config/gcloud \
-  -v opencode-sessions:/root/.local/share/opencode \
+  -v opencode-gcloud:/gcloud \
+  -v opencode-sessions:/sessions \
   --env-file "${HOME}/.opencode-vertex.env" \
-  -e GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json \
+  -e GOOGLE_APPLICATION_CREDENTIALS=/gcloud/application_default_credentials.json \
+  -e HOME=/sessions \
+  -e XDG_DATA_HOME=/sessions \
+  -e XDG_CACHE_HOME=/sessions/.cache \
+  -e OPENCODE_CONFIG=/etc/opencode/config.json \
   opencode-vertex'
 ```
 
 Docker:
 ```sh
 alias opencode='docker run -it --rm \
+  --user "$(id -u):$(id -g)" \
   -v "$(pwd)":/workspace \
-  -v opencode-gcloud:/root/.config/gcloud \
-  -v opencode-sessions:/root/.local/share/opencode \
+  -v opencode-gcloud:/gcloud \
+  -v opencode-sessions:/sessions \
   --env-file "${HOME}/.opencode-vertex.env" \
-  -e GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json \
+  -e GOOGLE_APPLICATION_CREDENTIALS=/gcloud/application_default_credentials.json \
+  -e HOME=/sessions \
+  -e XDG_DATA_HOME=/sessions \
+  -e XDG_CACHE_HOME=/sessions/.cache \
+  -e OPENCODE_CONFIG=/etc/opencode/config.json \
   opencode-vertex'
 ```
 
@@ -116,8 +127,8 @@ docker build --no-cache -t opencode-vertex .
 |---|---|
 | Base image | `alpine:3.21` |
 | opencode binary | musl build (native Alpine, no glibc shim) |
-| Credentials | `opencode-gcloud` volume |
-| Sessions | `opencode-sessions` volume |
+| Credentials | `opencode-gcloud` volume, mounted at `/gcloud` |
+| Sessions | `opencode-sessions` volume, mounted at `/sessions` (`HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME`) |
 | Project files | Mounted from `$(pwd)` at `/workspace` |
 | Container runtime | Podman or Docker (auto-detected) |
 

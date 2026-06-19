@@ -23,8 +23,8 @@ RUN set -eux; \
     chmod 755 /usr/local/bin/opencode; \
     rm /tmp/opencode.tar.gz
 
-# Bake in the provider configuration
-COPY opencode.json /root/.config/opencode/config.json
+# Bake in the provider configuration at a fixed path independent of $HOME
+COPY opencode.json /etc/opencode/config.json
 
 WORKDIR /workspace
 
