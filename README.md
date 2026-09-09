@@ -125,7 +125,7 @@ docker build --no-cache -t opencode-vertex .
 
 | Component | Details |
 |---|---|
-| Base image | `alpine:3.21` |
+| Base image | `alpine:3.24` |
 | opencode binary | musl build (native Alpine, no glibc shim) |
 | Credentials | `opencode-gcloud` volume, mounted at `/gcloud` |
 | Sessions | `opencode-sessions` volume, mounted at `/sessions` (`HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME`) |

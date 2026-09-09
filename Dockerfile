@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM alpine:3.21
+FROM alpine:3.24
 
 # Install runtime dependencies
 # - ca-certificates: TLS verification for API calls
