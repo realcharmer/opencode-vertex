@@ -24,7 +24,7 @@ A scheduled workflow checks for new opencode releases and publishes a new image 
 
 The script will:
 - Auto-detect Podman or Docker (Podman is preferred if both are present)
-- Build the `opencode-vertex` image
+- Pull the `opencode-vertex` image from GHCR
 - Create two named volumes for persistent state
 - Automatically run the one-time Google Cloud login if credentials are not yet present
 
@@ -52,7 +52,7 @@ alias opencode='podman run -it --rm \
   -e XDG_DATA_HOME=/sessions \
   -e XDG_CACHE_HOME=/sessions/.cache \
   -e OPENCODE_CONFIG=/etc/opencode/config.json \
-  opencode-vertex'
+  ghcr.io/realcharmer/opencode-vertex:latest'
 ```
 
 Docker:
@@ -68,7 +68,7 @@ alias opencode='docker run -it --rm \
   -e XDG_DATA_HOME=/sessions \
   -e XDG_CACHE_HOME=/sessions/.cache \
   -e OPENCODE_CONFIG=/etc/opencode/config.json \
-  opencode-vertex'
+  ghcr.io/realcharmer/opencode-vertex:latest'
 ```
 
 `setup.sh` prints the exact alias for you (using whichever runtime was detected), so you can copy it directly.
@@ -115,7 +115,7 @@ It behaves as if opencode were installed locally. Sessions are persisted across 
 
 ## Updating
 
-Rebuild the image to pull the latest opencode release:
+Pull the latest published image:
 
 ```sh
 ./update.sh
@@ -125,12 +125,18 @@ Or manually:
 
 Podman:
 ```sh
-podman build --no-cache -t opencode-vertex .
+podman pull ghcr.io/realcharmer/opencode-vertex:latest
 ```
 
 Docker:
 ```sh
-docker build --no-cache -t opencode-vertex .
+docker pull ghcr.io/realcharmer/opencode-vertex:latest
+```
+
+### Building locally
+
+```sh
+docker build -t opencode-vertex .
 ```
 
 To pin a specific opencode release instead of tracking `latest`:
@@ -138,6 +144,8 @@ To pin a specific opencode release instead of tracking `latest`:
 ```sh
 docker build --build-arg OPENCODE_VERSION=v1.18.30 -t opencode-vertex .
 ```
+
+Point your alias at `opencode-vertex` instead of the GHCR tag when using a local build.
 
 ## Architecture
 

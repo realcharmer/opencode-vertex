@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE="opencode-vertex"
+IMAGE="ghcr.io/realcharmer/opencode-vertex:latest"
 
 # Colors
 RED='\033[0;31m'
@@ -33,8 +33,8 @@ fi
 
 echo "  Using runtime: ${RUNTIME}"
 
-echo "==> Rebuilding image: ${IMAGE} (no cache)..."
-"${RUNTIME}" build --no-cache -t "${IMAGE}" "$(dirname "$0")"
+echo "==> Pulling image: ${IMAGE}..."
+"${RUNTIME}" pull "${IMAGE}"
 
 echo ""
 echo -e "${GREEN}Update complete. ${IMAGE} is now running the latest opencode release.${NC}"

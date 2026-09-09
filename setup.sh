@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE="opencode-vertex"
+IMAGE="ghcr.io/realcharmer/opencode-vertex:latest"
 ENV_FILE="${HOME}/.opencode-vertex.env"
 GCLOUD_VOLUME="opencode-gcloud"
 SESSIONS_VOLUME="opencode-sessions"
@@ -50,8 +50,8 @@ if grep -q "your-project-id" "${ENV_FILE}"; then
   echo -e "Edit ${ENV_FILE} and set your real project ID before using opencode."
 fi
 
-echo "==> Building image: ${IMAGE}..."
-"${RUNTIME}" build -t "${IMAGE}" "$(dirname "$0")"
+echo "==> Pulling image: ${IMAGE}..."
+"${RUNTIME}" pull "${IMAGE}"
 
 echo "==> Creating volumes (if not already present)..."
 "${RUNTIME}" volume create "${GCLOUD_VOLUME}" &>/dev/null && echo "  Volume ${GCLOUD_VOLUME} ready."
