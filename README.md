@@ -2,6 +2,18 @@
 
 Run [opencode](https://opencode.ai) via Docker or Podman, using Google Vertex AI as the model provider. No local installation of opencode or the Google Cloud SDK required.
 
+## Prebuilt image
+
+Multi-arch images (`linux/amd64`, `linux/arm64`) are published to GitHub Container Registry:
+
+```sh
+docker pull ghcr.io/realcharmer/opencode-vertex:latest
+```
+
+Image tags mirror the upstream opencode release.
+
+A scheduled workflow checks for new opencode releases and publishes a new image only when the version has changed.
+
 ## Setup
 
 **1. Clone and run setup:**
@@ -119,6 +131,12 @@ podman build --no-cache -t opencode-vertex .
 Docker:
 ```sh
 docker build --no-cache -t opencode-vertex .
+```
+
+To pin a specific opencode release instead of tracking `latest`:
+
+```sh
+docker build --build-arg OPENCODE_VERSION=v1.18.30 -t opencode-vertex .
 ```
 
 ## Architecture

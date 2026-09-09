@@ -7,6 +7,9 @@ FROM alpine:3.24
 # - git: opencode uses git for project context
 RUN apk add --no-cache ca-certificates libstdc++ git
 
+# Which opencode release to install: "latest", or a release tag such as "v1.18.30".
+ARG OPENCODE_VERSION=latest
+
 # Download and install the correct opencode musl binary for the build arch.
 # uname -m works with both the legacy builder and BuildKit.
 RUN set -eux; \
@@ -16,8 +19,11 @@ RUN set -eux; \
         aarch64) ASSET="opencode-linux-arm64-musl.tar.gz" ;; \
         *) echo "Unsupported architecture: ${ARCH}" && exit 1 ;; \
     esac; \
-    wget -qO /tmp/opencode.tar.gz \
-        "https://github.com/anomalyco/opencode/releases/latest/download/${ASSET}"; \
+    case "${OPENCODE_VERSION}" in \
+        latest) URL="https://github.com/anomalyco/opencode/releases/latest/download/${ASSET}" ;; \
+        *)      URL="https://github.com/anomalyco/opencode/releases/download/${OPENCODE_VERSION}/${ASSET}" ;; \
+    esac; \
+    wget -qO /tmp/opencode.tar.gz "${URL}"; \
     tar -xzf /tmp/opencode.tar.gz -C /tmp/; \
     mv /tmp/opencode /usr/local/bin/opencode; \
     chmod 755 /usr/local/bin/opencode; \
