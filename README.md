@@ -26,6 +26,7 @@ The script will:
 - Auto-detect Podman or Docker (Podman is preferred if both are present)
 - Pull the `opencode-vertex` image from GHCR
 - Create two named volumes for persistent state
+- Create `~/.config/opencode` on the host if it doesn't exist, for global skills/config
 - Automatically run the one-time Google Cloud login if credentials are not yet present
 
 **2. Edit your env file:**
@@ -46,6 +47,7 @@ alias opencode='podman run -it --rm \
   -v "$(pwd)":/workspace \
   -v opencode-gcloud:/gcloud \
   -v opencode-sessions:/sessions \
+  -v "${HOME}/.config/opencode":/sessions/.config/opencode \
   --env-file "${HOME}/.opencode-vertex.env" \
   -e GOOGLE_APPLICATION_CREDENTIALS=/gcloud/application_default_credentials.json \
   -e HOME=/sessions \
@@ -62,6 +64,7 @@ alias opencode='docker run -it --rm \
   -v "$(pwd)":/workspace \
   -v opencode-gcloud:/gcloud \
   -v opencode-sessions:/sessions \
+  -v "${HOME}/.config/opencode":/sessions/.config/opencode \
   --env-file "${HOME}/.opencode-vertex.env" \
   -e GOOGLE_APPLICATION_CREDENTIALS=/gcloud/application_default_credentials.json \
   -e HOME=/sessions \
@@ -147,6 +150,15 @@ docker build --build-arg OPENCODE_VERSION=v1.18.30 -t opencode-vertex .
 
 Point your alias at `opencode-vertex` instead of the GHCR tag when using a local build.
 
+## Agent Skills
+
+The default shell alias mounts `~/.config/opencode` inside the container.
+Create one folder per skill in `~/.config/opencode/skills` and put a SKILL.md inside it, for example:
+
+```
+~/.config/opencode/skills/<name>/SKILL.md
+```
+
 ## Architecture
 
 | Component | Details |
@@ -155,6 +167,7 @@ Point your alias at `opencode-vertex` instead of the GHCR tag when using a local
 | opencode binary | musl build (native Alpine, no glibc shim) |
 | Credentials | `opencode-gcloud` volume, mounted at `/gcloud` |
 | Sessions | `opencode-sessions` volume, mounted at `/sessions` (`HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME`) |
+| Global config & skills | Host `~/.config/opencode`, mounted at `/sessions/.config/opencode` (matches remapped `$HOME`) |
 | Project files | Mounted from `$(pwd)` at `/workspace` |
 | Container runtime | Podman or Docker (auto-detected) |
 

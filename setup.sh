@@ -6,6 +6,8 @@ ENV_FILE="${HOME}/.opencode-vertex.env"
 GCLOUD_VOLUME="opencode-gcloud"
 SESSIONS_VOLUME="opencode-sessions"
 SESSIONS_MOUNT="/sessions"
+CONFIG_DIR="${HOME}/.config/opencode"
+CONFIG_MOUNT="${SESSIONS_MOUNT}/.config/opencode"
 
 # Colors
 RED='\033[0;31m'
@@ -48,6 +50,14 @@ fi
 if grep -q "your-project-id" "${ENV_FILE}"; then
   echo -e "${YELLOW}Warning: GOOGLE_CLOUD_PROJECT in ${ENV_FILE} still has the placeholder value.${NC}"
   echo -e "Edit ${ENV_FILE} and set your real project ID before using opencode."
+fi
+
+# Create ~/.config/opencode if it doesn't exist, so the bind mount below
+# lands on a host directory owned by the current user (not auto-created
+# by the container runtime as root).
+if [[ ! -d "${CONFIG_DIR}" ]]; then
+  mkdir -p "${CONFIG_DIR}"
+  echo "  Created ${CONFIG_DIR} for global opencode config and skills."
 fi
 
 echo "==> Pulling image: ${IMAGE}..."
@@ -126,6 +136,7 @@ if [[ "${RUNTIME}" == "podman" ]]; then
   echo "  -v \"\$(pwd)\":/workspace \\"
   echo "  -v ${GCLOUD_VOLUME}:/gcloud \\"
   echo "  -v ${SESSIONS_VOLUME}:${SESSIONS_MOUNT} \\"
+  echo "  -v \"${CONFIG_DIR}\":${CONFIG_MOUNT} \\"
   echo "  --env-file \"${ENV_FILE}\" \\"
   echo "  -e GOOGLE_APPLICATION_CREDENTIALS=/gcloud/application_default_credentials.json \\"
   echo "  -e HOME=${SESSIONS_MOUNT} \\"
@@ -139,6 +150,7 @@ else
   echo "  -v \"\$(pwd)\":/workspace \\"
   echo "  -v ${GCLOUD_VOLUME}:/gcloud \\"
   echo "  -v ${SESSIONS_VOLUME}:${SESSIONS_MOUNT} \\"
+  echo "  -v \"${CONFIG_DIR}\":${CONFIG_MOUNT} \\"
   echo "  --env-file \"${ENV_FILE}\" \\"
   echo "  -e GOOGLE_APPLICATION_CREDENTIALS=/gcloud/application_default_credentials.json \\"
   echo "  -e HOME=${SESSIONS_MOUNT} \\"
