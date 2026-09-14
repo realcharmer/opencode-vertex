@@ -5,7 +5,7 @@ FROM alpine:3.24
 # - ca-certificates: TLS verification for API calls
 # - libstdc++: required by the opencode binary (Bun runtime)
 # - git: opencode uses git for project context
-RUN apk add --no-cache ca-certificates libstdc++ git
+RUN apk add --no-cache ca-certificates libstdc++ git uv
 
 # Which opencode release to install: "latest", or a release tag such as "v1.18.30".
 ARG OPENCODE_VERSION=latest
